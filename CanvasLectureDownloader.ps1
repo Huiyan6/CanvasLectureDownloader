@@ -1,44 +1,44 @@
-#The naming kinda sucks ik, idk why I decided to use spontantous capitalization whenver I felt like it, I'll change it maybe...
-$CanvasURL = "https://canvas.ualberta.ca"
-$Token = "PASTE YOUR CANVAS API ACCESS TOKEN HERE" #Account -> Settings -> new access token
-$Dest = "C:\Users\total\OneDrive\Desktop\Y3\T1\ECE 325\Lectures"
+$CanvasURL = "https://canvas.ualberta.ca" # I go to the University of Alberta, so this is the URL for my canvas instance, change it to your own if you want to use this script for your own courses
+$Token = Read-Host "Enter your Canvas API Token"
+$Dest = Read-Host "Enter the destination folder PATH for the downloaded files"
+
 
 $Headers = @{
 	Authorization = "Bearer $Token"
 }
 
 #Canvas page that shows all our courses
-$resp = Invoke-WebRequest -Uri "$CanvasURL/api/v1/courses?enrollment_state=active&per_page=100" -Headers $Headers
+$Courses = Invoke-RestMethod -Uri "$CanvasURL/api/v1/courses?enrollment_state=active&per_page=100" -Headers $Headers
 
-$Courses = $resp.Content | ConvertFrom-Json
+for($i = 0; $i -lt $Courses.Count; $i++){
+    Write-Host "$i -> $($Courses[$i].name)"    
+}
 
-#Course we want to download, index represents the course
-$CourseID = $Courses[5].id
+$CourseIndex = Read-Host "Enter the index of the course you want to download from"
+$CourseID = $Courses[$CourseIndex].id
 
-#Course webpage
-$Course = Invoke-WebRequest -Uri "$CanvasURL/api/v1/courses/$CourseID/modules?per_page=100" -Headers $Headers
+# Show all the modules in the course
+$Modules = Invoke-RestMethod -Uri "$CanvasURL/api/v1/courses/$CourseID/modules?per_page=100" -Headers $Headers
 
-$Modules = $Course.Content | ConvertFrom-Json
+for ($i = 0; $i -lt $Modules.Count; $i++) {
+    Write-Host "$i -> $($Modules[$i].name)"
+}
 
-$LectureID = $Modules[1].id # we know the lectures are index 2 because we piped Modules into Select id, name
+$ModuleIndex = Read-Host "Enter the index of the module you want to download from"
+$ModuleID = $Modules[$ModuleIndex].id
 
-#go into Lecture slides
-$LectureSlides = iwr -Uri "$CanvasURL/api/v1/courses/$CourseID/modules/$LectureID/items?per_page=100" -Headers $Headers
-
-#Convert Lecture Content from JSON
-$Slides = $LectureSlides.Content | ConvertFrom-Json
-
-#We want to loop through all the slides and download them
-foreach ($slide in $Slides){
-    if($slide.type -eq "File"){
-
-    $SlideID = $slide.content_id
-    $fileResp = Invoke-WebRequest -Uri "$CanvasURL/api/v1/files/$SlideID" -Headers $Headers
-
-    $file = $fileResp.Content | ConvertFrom-Json
-
-    #Download File
-    iwr -Uri $file.url -OutFile "$Dest\$($file.display_name)"
-
+# Depending on how the course is structured, there may be multiple ways to access the files.
+# The most common way is that a single module contains all the lectures, where each lecture is stored as a item in the module.
+$ModuleItems = Invoke-RestMethod -Uri "$CanvasURL/api/v1/courses/$CourseID/modules/$ModuleID/items?per_page=100" -Headers $Headers
+foreach ($item in $ModuleItems) {
+    if ($item.type -eq "File") {
+        $fileDetails = irm -Uri $item.url -Headers $Headers
+        
+        # Download the actual PDF
+        Write-Host "Downloading: $($fileDetails.display_name)"
+        iwr -Uri $fileDetails.url -OutFile "$Dest\$($fileDetails.display_name)"
     }
 }
+
+# I was gonna make a dynamic downloading system, where the script checks how the files are stored on canvas, however during the making of this
+# I found out my professor locked all the files, so I'm not gonna be able to use this script, gl to anyone that tries this, see you next semester maybe lol
