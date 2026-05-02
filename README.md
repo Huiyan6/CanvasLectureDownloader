@@ -1,4 +1,4 @@
 # CanvasLectureDownloader
-This is a powershell script to download canvas lectures automatically!! If your a lazy student who doesnt download lectures as soon as they come out and have piles of lectures to download then this is for you!
+This is a powershell script to download canvas lectures automatically!
 
-This is NOT a fully fleshed out script, I'll add more later
+I'm mostly doing this to learn more about .NET and working with scripts and powershell, cause everyone talks about bash but nobody ever uses powershell so I thought I'll be different idk
